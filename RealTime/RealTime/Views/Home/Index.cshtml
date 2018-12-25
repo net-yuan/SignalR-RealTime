@@ -1,0 +1,94 @@
+﻿@{
+    ViewBag.Title = "SignalR演示程序";
+}
+<br />
+<p><button class="btn btn-info" onclick="clkTest();">数据模拟</button></p>
+
+<p>1、本示例只是一个最小场景的演示</p>
+<p>2、当点击按钮的时候，柱状图数值加1并实时变化</p>
+<p>3、拆开来看，将点击操作看作服务器对数据的变化的发布；将柱状图数据变化看作是对服务器数据的订阅。这就是典型的数据推送，数据看板就是其中的一项应用。</p>
+<p>4、可以有好多变化：如果将点击按钮的动作替换为每n(s)自动触发一次；如果能感知数据库某个表的数据变化来触发图表变化</p>
+<!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
+<div id="main" style="width: 600px;height:400px;"></div>
+
+<script src="~/Scripts/jquery-1.10.2.js"></script>
+<script src="~/Scripts/echarts.simple.min.js"></script>
+@section Scripts {
+    <script src="@Url.Content("~/Scripts/jquery.signalR-2.4.0.min.js")"></script>
+    <script src="@Url.Content("~/signalr/hubs")" type="text/javascript"></script>
+    <script>
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+
+        // 指定图表的配置项和数据
+        option = {
+            color: ['#3398DB'],
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {            // 坐标轴指示器，坐标轴触发有效
+                    type: 'shadow'        // 默认为直线，可选为：'line' | 'shadow'
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            xAxis: [
+                {
+                    type: 'category',
+                    data: ['SignalR'],
+                    axisTick: {
+                        alignWithLabel: true
+                    }
+                }
+            ],
+            yAxis: [
+                {
+                    type: 'value'
+                }
+            ],
+            series: [
+                {
+                    name: '直接访问',
+                    type: 'bar',
+                    label: {
+                        normal: {
+                            show: true,
+                            position: 'inside'
+                        }
+                    },
+                    barWidth: '30%',
+                    data: [0]
+                }
+            ]
+        };
+
+        var connection = $.hubConnection();
+        var hub = connection.createHubProxy("ChartHub");
+        hub.on("updateChart", function (chart) {
+            statisticsData = chart;
+            console.log(statisticsData);
+            option.series[0].data[0] = statisticsData;
+            // 使用刚指定的配置项和数据显示图表。
+            myChart.setOption(option);
+            //$("#spCount").text(statisticsData);
+        });
+
+        connection.start();
+    </script>
+}
+
+<script>
+    $(function () {
+        myChart.setOption(option);
+    })
+
+    var clkTest = function () {
+        $.post("/api/Data", null, function (res) {
+            console.log(res);
+            //$("#spClicks").text(res);
+        }, "json")
+    }
+</script>
